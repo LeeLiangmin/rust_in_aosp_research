@@ -1,0 +1,482 @@
+Google Online Security Blog: Scaling Rust Adoption Through Training
+-->
+            Security Blog
+          
+The latest news and insights from Google on security and safety on the Internet
+Scaling Rust Adoption Through Training
+September 21, 2023
+                          Posted by Martin Geisler, Android team
+Android 14 is the third major Android release with Rust support. We are already seeing a number of benefits:
+Productivity: Developers quickly feel productive writing Rust. They report important indicators of development velocity, such as confidence in the code quality and ease of code review.
+Security: There has been a reduction in memory safety vulnerabilities as we shift more development to memory safe languages.
+These positive early results provided an enticing motivation to increase the speed and scope of Rust adoption. We hoped to accomplish this by investing heavily in training to expand from the early adopters.
+Scaling up from Early Adopters
+Early adopters are often willing to accept more risk to try out a new technology. They know there will be some inconveniences and a steep learning curve but are willing to learn, often on their own time.
+Scaling up Rust adoption required moving beyond early adopters. For that we need to ensure a baseline level of comfort and productivity within a set period of time. An important part of our strategy for accomplishing this was training. Unfortunately, the type of training we wanted to provide simply didn’t exist. We made the decision to write and implement our own Rust training. 
+Training Engineers
+Our goals for the training were to:
+Quickly ramp up engineers: It is hard to take people away from their regular work for a long period of time, so we aimed to provide a solid foundation for using Rust in days, not weeks. We could not make anybody a Rust expert in so little time, but we could give people the tools and foundation needed to be productive while they continued to grow. The goal is to enable people to use Rust to be productive members of their teams. The time constraints meant we couldn’t teach people programming from scratch; we also decided not to teach macros or unsafe Rust in detail.
+Make it engaging (and fun!): We wanted people to see a lot of Rust while also getting hands-on experience. Given the scope and time constraints mentioned above, the training was necessarily information-dense. This called for an interactive setting where people could quickly ask questions to the instructor. Research shows that retention improves when people can quickly verify assumptions and practice new concepts.
+Make it relevant for Android: The Android-specific tooling for Rust was already documented, but we wanted to show engineers how to use it via worked examples. We also wanted to document emerging standards, such as using thiserror and anyhow crates for error handling. Finally, because Rust is a new language in the Android Platform (AOSP), we needed to show how to interoperate with existing languages such as Java and C++.
+With those three goals as a starting point, we looked at the existing material and available tools.
+Existing Material
+Documentation is a key value of the Rust community and there are many great resources available for learning Rust. First, there is the freely available Rust Book, which covers almost all of the language. Second, the standard library is extensively documented.
+Because we knew our target audience, we could make stronger assumptions than most material found online. We created the course for engineers with at least 2–3 years of coding experience in either C, C++, or Java. This allowed us to move quickly when explaining concepts familiar to our audience, such as "control flow", “stack vs heap”, and “methods”. People with other backgrounds can learn Rust from the many other resources freely available online.
+Technology
+For free-form documentation, mdBook has become the de facto standard in the Rust community. It is used for official documentation such as the Rust Book and Rust Reference.
+A particularly interesting feature is the ability to embed executable snippets of Rust code. This is key to making the training engaging since the code can be edited live and executed directly in the slides:
+  
+  
+In addition to being a familiar community standard, mdBook offers the following important features:
+Maintainability: mdbook test compiles and executes every code snippet in the course. This allowed us to evolve the class over time while ensuring that we always showed valid code to the participants.
+Extensibility: mdBook has a plugin system which allowed us to extend the tool as needed. We relied on this feature for translations and ASCII art diagrams.
+These features made it easy for us to choose mdBook. While mdBook is not designed for presentations, the output looked OK on a projector when we limited the vertical size of each page.
+Supporting Translations
+Android has developers and OEM partners in many countries. It is critical that they can adapt existing Rust code in AOSP to fit their needs. To support translations, we developed mdbook-i18n-helpers. Support for multilingual documentation has been a community wish since 2015 and we are glad to see the plugins being adopted by several other projects to produce maintainable multilingual documentation for everybody.
+Comprehensive Rust
+With the technology and format nailed down, we started writing the course. We roughly followed the outline from the Rust Book since it covered most of what we need to cover. This gave us a three day course which we called Rust Fundamentals. We designed it to run for three days for five hours a day and encompass Rust syntax, semantics, and important concepts such as traits, generics, and error handling. 
+We then extended Rust Fundamentals with three deep dives:
+Rust in Android: a half-day course on using Rust for AOSP development. It includes interoperability with C, C++, and Java.
+Bare-metal Rust: a full-day class on using Rust for bare-metal development. Android devices ship significant amounts of firmware. These components are often foundational in nature (for example, the bootloader, which establishes the trust for the rest of the system), thus they must be secure.
+Concurrency in Rust: a full-day class on concurrency in Rust. We cover both multithreading with blocking synchronization primitives (such as mutexes) and async/await concurrency (cooperative multitasking using futures).
+A large set of in-house and community translators have helped translate the course into several languages. The full translations were Brazilian Portuguese and Korean. We are working on Simplified Chinese and Traditional Chinese translations as well.
+Course Reception
+We started teaching the class in late 2022. In 2023, we hired a vendor, Immunant, to teach the majority of classes for Android engineers. This was important for scalability and for quality: dedicated instructors soon discovered where the course participants struggled and could adapt the delivery. In addition, over 30 Googlers have taught the course worldwide.
+More than 500 Google engineers have taken the class. Feedback has been very positive: 96% of participants agreed it was worth their time. People consistently told us that they loved the interactive style, highlighting how it helped to be able to ask clarifying questions at any time. Instructors noted that people gave the course their undivided attention once they realized it was live. Live-coding demands a lot from the instructor, but it is worth it due to the high engagement it achieves.
+Most importantly, people exited this course and were able to be immediately productive with Rust in their day jobs. When participants were asked three months later, they confirmed that they were able to write and review Rust code. This matched the results from the much larger survey we made in 2022.
+Looking Forward
+We have been teaching Rust classes at Google for a year now. There are a few things that we want to improve: better topic ordering, more exercises, and more speaker notes. We would also like to extend the course with more deep dives. Pull requests are very welcome!
+The full course is available for free at https://google.github.io/comprehensive-rust/. We are thrilled to see people starting to use Comprehensive Rust for classes around the world. We hope it can be a useful resource for the Rust community and that it will help both small and large teams get started on their Rust journey!
+Thanks!
+We are grateful to the 190+ contributors from all over the world who created more than 1,000 pull requests and issues on GitHub. Their bug reports, fixes, and feedback  improved the course in countless ways. This includes the 50+ people who worked hard on writing and maintaining the many translations.
+Special thanks to Andrew Walbran for writing Bare-metal Rust and to Razieh Behjati, Dustin Mitchell, and Alexandre Senges for writing Concurrency in Rust.
+We also owe a great deal of thanks to the many volunteer instructors at Google who have been spending their time teaching classes around the globe. Your feedback has helped shape the course.
+Finally, thanks to Jeffrey Vander Stoep, Ivan Lozano, Matthew Maurer, Dmytro Hrybenko, and Lars Bergstrom for providing feedback on this post.
+  
+                        
+                        Google
+                      
+Labels:
+android
+                                ,
+                              
+rust
+No comments
+                      :
+                    
+Post a Comment
+                      
+                    
+                          
+                        
+                          
+                        
+Labels
+                      
+                    
+#sharethemicincyber
+#supplychain #security #opensource
+AI Security
+android
+android security
+android tr
+app security
+big data
+biometrics
+blackhat
+C++
+chrome
+chrome enterprise
+chrome security
+connected devices
+CTF
+diversity
+encryption
+federated learning
+fuzzing
+Gboard
+google play
+google play protect
+hacking
+interoperability
+iot security
+kubernetes
+linux kernel
+memory safety
+Open Source
+pha family highlights
+pixel
+privacy
+private compute core
+Rowhammer
+rust
+Security
+security rewards program
+sigstore
+spyware
+supply chain
+targeted spyware
+tensor
+Titan M2
+VDP
+vulnerabilities
+workshop
+                      
+                    
+Archive
+                      
+                    
+                    
+                  
+                        
+                      
+                       
+                    
+2026
+Jan
+Feb
+Mar
+Apr
+                    
+                  
+                        
+                      
+                       
+                    
+2025
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2024
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                      
+2023
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2022
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2021
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2020
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2019
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2018
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2017
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2016
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2015
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2014
+Jan
+Feb
+Mar
+Apr
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2013
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2012
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Sep
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2011
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2010
+Mar
+Apr
+May
+Jul
+Aug
+Sep
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2009
+Mar
+Jun
+Jul
+Aug
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2008
+Feb
+May
+Jul
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2007
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Feed
+  
+		   
+Follow @google
+     Follow
+Give us feedback in our Product Forums.
+              Google
+            
+              Privacy
+            
+              Terms

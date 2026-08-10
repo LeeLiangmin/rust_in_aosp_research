@@ -1,0 +1,448 @@
+Google Online Security Blog: Improving Interoperability Between Rust and C++
+-->
+            Security Blog
+          
+The latest news and insights from Google on security and safety on the Internet
+Improving Interoperability Between Rust and C++
+February 5, 2024
+                          Posted by Lars Bergstrom – Director, Android Platform Tools & Libraries and Chair of the Rust Foundation Board
+Back in 2021, we announced that Google was joining the Rust Foundation. At the time, Rust was already in wide use across Android and other Google products. Our announcement emphasized our commitment to improving the security reviews of Rust code and its interoperability with C++ code. Rust is one of the strongest tools we have to address memory safety security issues. Since that announcement, industry leaders and government agencies have echoed our sentiment. 
+We are delighted to announce that Google has provided a grant of $1 million to the Rust Foundation to support efforts that will improve the ability of Rust code to interoperate with existing legacy C++ codebases. We’re also furthering our existing commitment to the open-source Rust community by aggregating and publishing audits for Rust crates that we use in open-source Google projects. These contributions, along with our previous interoperability contributions, have us excited about the future of Rust.
+“Based on historical vulnerability density statistics, Rust has proactively prevented hundreds of vulnerabilities from impacting the Android ecosystem. This investment aims to expand the adoption of Rust across various components of the platform.”  – Dave Kleidermacher, Google Vice President of Engineering, Android Security & Privacy
+While Google has seen the most significant growth in the use of Rust in Android, we’re continuing to grow its use across more applications, including clients and server hardware.
+    “While Rust may not be suitable for all product applications, prioritizing seamless interoperability with C++ will accelerate wider community adoption, thereby aligning with the industry goals of improving memory safety.” – Royal Hansen, Google Vice President of Safety & Security
+The Rust tooling and ecosystem already support interoperability with Android and with continued investment in tools like cxx, autocxx, bindgen, cbindgen, diplomat, and crubit, we are seeing regular improvements in the state of Rust interoperability with C++. As these improvements have continued, we’ve seen a reduction in the barriers to adoption and accelerated adoption of Rust. While that progress across the many tools continues, it is often only expanded incrementally to support the particular needs of a given project or company.
+In order to accelerate both Rust adoption at Google as well as more broadly across the industry, we are eager to invest in and collaborate on any needed ABI changes, tooling and build system support, wrapper libraries, or other areas identified.
+We are excited to support this work through the Rust Foundation’s Interop Initiative and in collaboration with the Rust project to ensure that any additions made are suitable and address the challenges of Rust adoption that projects using C++ face. Improving memory safety across the software industry is one of the key technology challenges of our time, and we invite others across the community and industry to join us in working together to secure the open source ecosystem for everyone.
+Learn more about the Rust Foundation’s Interop Initiative by reading their recent announcement.
+  
+                        
+                        Google
+                      
+Labels:
+android
+                                ,
+                              
+android security
+                                ,
+                              
+Open Source
+No comments
+                      :
+                    
+Post a Comment
+                      
+                    
+                          
+                        
+                          
+                        
+Labels
+                      
+                    
+#sharethemicincyber
+#supplychain #security #opensource
+AI Security
+android
+android security
+android tr
+app security
+big data
+biometrics
+blackhat
+C++
+chrome
+chrome enterprise
+chrome security
+connected devices
+CTF
+diversity
+encryption
+federated learning
+fuzzing
+Gboard
+google play
+google play protect
+hacking
+interoperability
+iot security
+kubernetes
+linux kernel
+memory safety
+Open Source
+pha family highlights
+pixel
+privacy
+private compute core
+Rowhammer
+rust
+Security
+security rewards program
+sigstore
+spyware
+supply chain
+targeted spyware
+tensor
+Titan M2
+VDP
+vulnerabilities
+workshop
+                      
+                    
+Archive
+                      
+                    
+                    
+                  
+                        
+                      
+                       
+                    
+2026
+Jan
+Feb
+Mar
+Apr
+                    
+                  
+                        
+                      
+                       
+                    
+2025
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                      
+2024
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2023
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2022
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2021
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2020
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2019
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2018
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2017
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2016
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2015
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2014
+Jan
+Feb
+Mar
+Apr
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2013
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2012
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Sep
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2011
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2010
+Mar
+Apr
+May
+Jul
+Aug
+Sep
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2009
+Mar
+Jun
+Jul
+Aug
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2008
+Feb
+May
+Jul
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2007
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Feed
+  
+		   
+Follow @google
+     Follow
+Give us feedback in our Product Forums.
+              Google
+            
+              Privacy
+            
+              Terms

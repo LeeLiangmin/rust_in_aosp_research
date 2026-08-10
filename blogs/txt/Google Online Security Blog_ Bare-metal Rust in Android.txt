@@ -1,0 +1,459 @@
+Google Online Security Blog: Bare-metal Rust in Android
+-->
+            Security Blog
+          
+The latest news and insights from Google on security and safety on the Internet
+Bare-metal Rust in Android
+October 9, 2023
+                          Posted by Andrew Walbran, Android Rust Team
+Last year we wrote about how moving native code in Android from C++ to Rust has resulted in fewer security vulnerabilities. Most of the components we mentioned then were system services in userspace (running under Linux), but these are not the only components typically written in memory-unsafe languages. Many security-critical components of an Android system run in a “bare-metal” environment, outside of the Linux kernel, and these are historically written in C. As part of our efforts to harden firmware on Android devices, we are increasingly using Rust in these bare-metal environments too.
+To that end, we have rewritten the Android Virtualization Framework’s protected VM (pVM) firmware in Rust to provide a memory safe foundation for the pVM root of trust. This firmware performs a similar function to a bootloader, and was initially built on top of U-Boot, a widely used open source bootloader. However, U-Boot was not designed with security in a hostile environment in mind, and there have been numerous security vulnerabilities found in it due to out of bounds memory access, integer underflow and memory corruption. Its VirtIO drivers in particular had a number of missing or problematic bounds checks. We fixed the specific issues we found in U-Boot, but by leveraging Rust we can avoid these sorts of memory-safety vulnerabilities in future. The new Rust pVM firmware was released in Android 14.
+As part of this effort, we contributed back to the Rust community by using and contributing to existing crates where possible, and publishing a number of new crates as well. For example, for VirtIO in pVM firmware we’ve spent time fixing bugs and soundness issues in the existing virtio-drivers crate, as well as adding new functionality, and are now helping maintain this crate. We’ve published crates for making PSCI and other Arm SMCCC calls, and for managing page tables. These are just a start; we plan to release more Rust crates to support bare-metal programming on a range of platforms. These crates are also being used outside of Android, such as in Project Oak and the bare-metal section of our Comprehensive Rust course.
+Training engineers
+Many engineers have been positively surprised by how productive and pleasant Rust is to work with, providing nice high-level features even in low-level environments. The engineers working on these projects come from a range of backgrounds. Our comprehensive Rust course has helped experienced and novice programmers quickly come up to speed. Anecdotally the Rust type system (including the borrow checker and lifetimes) helps avoid making mistakes that are easily made in C or C++, such as leaking pointers to stack-allocated values out of scope.
+One of our bare-metal Rust course attendees had this to say:
+"types can be built that bring in all of Rust's niceties and safeties and 
+yet still compile down to extremely efficient code like writes
+of constants to memory-mapped IO."
+97% of attendees that completed a survey agreed the course was worth their time.
+Advantages and challenges
+Device drivers are often written in an object-oriented fashion for flexibility, even in C. Rust traits, which can be seen as a form of compile-time polymorphism, provide a useful high-level abstraction for this. In many cases this can be resolved entirely at compile time, with no runtime overhead of dynamic dispatch via vtables or structs of function pointers.
+There have been some challenges. Safe Rust’s type system is designed with an implicit assumption that the only memory the program needs to care about is allocated by the program (be it on the stack, the heap, or statically), and only used by the program. Bare-metal programs often have to deal with MMIO and shared memory, which break this assumption. This tends to require a lot of unsafe code and raw pointers, with limited tools for encapsulation. There is some disagreement in the Rust community about the soundness of references to MMIO space, and the facilities for working with raw pointers in stable Rust are currently somewhat limited. The stabilisation of offset_of, slice_ptr_get, slice_ptr_len, and other nightly features will improve this, but it is still challenging to encapsulate cleanly. Better syntax for accessing struct fields and array indices via raw pointers without creating references would also be helpful.
+The concurrency introduced by interrupt and exception handlers can also be awkward, as they often need to access shared mutable state but can’t rely on being able to take locks. Better abstractions for critical sections will help somewhat, but there are some exceptions that can’t practically be disabled, such as page faults used to implement copy-on-write or other on-demand page mapping strategies.
+Another issue we’ve had is that some unsafe operations, such as manipulating the page table, can’t be encapsulated cleanly as they have safety implications for the whole program. Usually in Rust we are able to encapsulate unsafe operations (operations which may cause undefined behaviour in some circumstances, because they have contracts which the compiler can’t check) in safe wrappers where we ensure the necessary preconditions so that it is not possible for any caller to cause undefined behaviour. However, mapping or unmapping pages in one part of the program can make other parts of the program invalid, so we haven’t found a way to provide a fully general safe interface to this. It should be noted that the same concerns apply to a program written in C, where the programmer always has to reason about the safety of the whole program.
+Some people adopting Rust for bare-metal use cases have raised concerns about binary size. We have seen this in some cases; for example our Rust pVM firmware binary is around 460 kB compared to 220 kB for the earlier C version. However, this is not a fair comparison as we also added more functionality which allowed us to remove other components from the boot chain, so the overall size of all VM boot chain components was comparable. We also weren’t particularly optimizing for binary size in this case; speed and correctness were more important. In cases where binary size is critical, compiling with size optimization, being careful about dependencies, and avoiding Rust’s string formatting machinery in release builds usually allows comparable results to C.
+Architectural support is another concern. Rust is generally well supported on the Arm and RISC-V cores that we see most often, but support for more esoteric architectures (for example, the Qualcomm Hexagon DSP included in many Qualcomm SoCs used in Android phones) can be lacking compared to C.
+The future of bare-metal Rust
+Overall, despite these challenges and limitations, we’ve still found Rust to be a significant improvement over C (or C++), both in terms of safety and productivity, in all the bare-metal use cases where we’ve tried it so far. We plan to use it wherever practical.
+As well as the work in the Android Virtualization Framework, the team working on Trusty (the open-source Trusted Execution Environment used on Pixel phones, among others) have been hard at work adding support for Trusted Applications written in Rust. For example, the reference KeyMint Trusted Application implementation is now in Rust. And there’s more to come in future Android devices, as we continue to use Rust to improve security of the devices you trust.
+  
+                        
+                        Google
+                      
+Labels:
+android
+                                ,
+                              
+android security
+                                ,
+                              
+rust
+No comments
+                      :
+                    
+Post a Comment
+                      
+                    
+                          
+                        
+                          
+                        
+Labels
+                      
+                    
+#sharethemicincyber
+#supplychain #security #opensource
+AI Security
+android
+android security
+android tr
+app security
+big data
+biometrics
+blackhat
+C++
+chrome
+chrome enterprise
+chrome security
+connected devices
+CTF
+diversity
+encryption
+federated learning
+fuzzing
+Gboard
+google play
+google play protect
+hacking
+interoperability
+iot security
+kubernetes
+linux kernel
+memory safety
+Open Source
+pha family highlights
+pixel
+privacy
+private compute core
+Rowhammer
+rust
+Security
+security rewards program
+sigstore
+spyware
+supply chain
+targeted spyware
+tensor
+Titan M2
+VDP
+vulnerabilities
+workshop
+                      
+                    
+Archive
+                      
+                    
+                    
+                  
+                        
+                      
+                       
+                    
+2026
+Jan
+Feb
+Mar
+Apr
+                    
+                  
+                        
+                      
+                       
+                    
+2025
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2024
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                      
+2023
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2022
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2021
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2020
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2019
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2018
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2017
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2016
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2015
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2014
+Jan
+Feb
+Mar
+Apr
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2013
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2012
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Sep
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2011
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2010
+Mar
+Apr
+May
+Jul
+Aug
+Sep
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2009
+Mar
+Jun
+Jul
+Aug
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2008
+Feb
+May
+Jul
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2007
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Feed
+  
+		   
+Follow @google
+     Follow
+Give us feedback in our Product Forums.
+              Google
+            
+              Privacy
+            
+              Terms

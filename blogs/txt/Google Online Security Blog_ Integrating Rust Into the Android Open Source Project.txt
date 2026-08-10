@@ -1,0 +1,492 @@
+Google Online Security Blog: Integrating Rust Into the Android Open Source Project
+-->
+            Security Blog
+          
+The latest news and insights from Google on security and safety on the Internet
+Integrating Rust Into the Android Open Source Project
+May 11, 2021
+                          Posted by Ivan Lozano, Android Team
+The Android team has been working on introducing the Rust programming language into the Android Open Source Project (AOSP) since 2019 as a memory-safe alternative for platform native code development. As with any large project, introducing a new language requires careful consideration. For Android, one important area was assessing how to best fit Rust into Android’s build system. Currently this means the Soong build system (where the Rust support resides), but these design decisions and considerations are equally applicable for Bazel when AOSP migrates to that build system. This post discusses some of the key design considerations and resulting decisions we made in integrating Rust support into Android’s build system.
+Rust integration into large projects
+A RustConf 2019 meeting on Rust usage within large organizations highlighted several challenges, such as the risk that eschewing Cargo in favor of using the Rust Compiler, rustc,  directly (see next section) may remove organizations from the wider Rust community. We share this same concern. When changes to imported third-party crates might be beneficial to the wider community, our goal is to upstream those changes. Likewise when crates developed for Android could benefit the wider Rust community, we hope to release them as independent crates. We believe that the success of Rust within Android is dependent on minimizing any divergence between Android and the Rust community at large, and hope that the Rust community will benefit from Android’s involvement.
+No nested build systems
+Rust provides Cargo as the default build system and package manager, collecting dependencies and invoking rustc (the Rust compiler) to build the target crate (Rust package). Soong takes this role instead in Android and calls rustc directly for several reasons:
+In Cargo, C dependencies are handled independently in an ad-hoc manner via build.rs scripts. Soong already provides a mechanism for building C libraries and defining them as dependencies, and Android carefully controls the compiler version and global compilation flags to ensure libraries are built a particular way. Relying on Cargo would introduce a second non-Soong mechanism for defining/building C libraries that would not be constrained by the carefully selected compilation controls implemented in Soong. This could also lead to multiple different versions of the same library, negatively impacting memory/disk usage. 
+Calling compilers directly through Soong provides the stability and control Android requires for the variety of build configurations it supports (for example, specifying where target-specific dependencies are and which compilation flags to use). While it would technically be possible to achieve the necessary level of control over rustc indirectly through Cargo, Soong would have no understanding of how the Cargo.toml (the Cargo build file) would influence the commands Cargo emits to rustc. Paired with the fact that Cargo evolves independently, this would severely restrict Soong’s ability to precisely control how build artifacts are created. 
+Builds which are self-contained and insensitive to the host configuration, known as hermetic builds, are necessary for Android to produce reproducible builds. Cargo, which relies on build.rs scripts, doesn’t yet provide hermeticity guarantees.
+Incremental builds are important to maintain engineering productivity; building Android takes a considerable amount of resources. Cargo was not designed for integration into existing build systems and does not expose its compilation units. Each Cargo invocation builds the entire crate dependency graph for a given Cargo.toml, rebuilding crates multiple times across projects1. This is too coarse for integration into Soong’s incremental build support, which expects smaller compilation units. This support is necessary to scale up Rust usage within Android.
+Using the Rust compiler directly allows us to avoid these issues and is consistent with how we compile all other code in AOSP. It provides the most control over the build process and eases integration into Android’s existing build system. Unfortunately, avoiding it introduces several challenges and influences many other build system decisions because Cargo usage is so deeply ingrained in the Rust crate ecosystem. 
+No build.rs scripts
+A build.rs script compiles to a Rust binary which Cargo builds and executes during a build to handle pre-build tasks, commonly setting up the build environment, or building libraries in other languages (for example C/C++). This is analogous to configure scripts used for other languages. 
+Avoiding build.rs scripts somewhat flows naturally from not relying on Cargo since supporting these would require replicating Cargo behavior and assumptions. Beyond this however, there are good reasons for AOSP to avoid build scripts as well:
+build.rs scripts can execute arbitrary code on the build host. From a security perspective, this introduces an additional burden when adding or updating third-party code as the build.rs script needs careful scrutiny.
+Third-party build.rs scripts may not be hermetic or reproducible in potentially subtle ways. It is also common for build.rs files to access files outside the build directory (such as /usr/lib). When they are not hermetic, we would need to either carry a local patch or work with upstream to resolve the issue.
+The most common task for build.rs is to build C libraries which Rust code depends on. We already support this through Soong.
+Android likewise avoids running build scripts while building for other languages, instead, simply using them to inform the structure of the Android.bp file.
+For instances in third-party code where a build script is used only to compile C dependencies, we either use existing cc_library Soong definitions (such as boringssl for quiche) or create new definitions for crate-specific code. 
+When the build.rs is used to generate source, we try to replicate the core functionality in a Soong rust_binary module for use as a custom source generator. In other cases where Soong can provide the information without source generation, we may carry a small patch that leverages this information.
+Why proc_macro but not build.rs?
+Why do we support proc_macros, which are compiler plug-ins that execute code on the host within the compiler context, but not build.rs scripts?
+While build.rs code is written as one-off code to handle building a single crate, proc_macros define reusable functionality within the compiler which can become widely relied upon across the Rust community. As a result popular proc_macros are generally better maintained and more scrutinized upstream, which makes the code review process more manageable. They are also more readily sandboxed as part of the build process since they are less likely to have dependencies external to the compiler.
+proc_macros are also a language feature rather than a method for building code. These are relied upon by source code, are unavoidable for third-party dependencies, and are useful enough to define and use within our platform code. While we can avoid build.rs by leveraging our build system, the same can’t be said of proc_macros.
+There is also precedence for compiler plugin support within the Android build system. For example see Soong’s java_plugin modules.
+Generated source as crates
+Unlike C/C++ compilers, rustc only accepts a single source file representing an entry point to a binary or library. It expects that the source tree is structured such that all required source files can be automatically discovered. This means that generated source either needs to be placed in the source tree or provided through an include directive in source:
+include!("/path/to/hello.rs");
+The Rust community depends on build.rs scripts alongside assumptions about the Cargo build environment to get around this limitation. When building, the cargo command sets an OUT_DIR environment variable which build.rs scripts are expected to place generated source code in. This source can then be included via:
+include!(concat!(env!("OUT_DIR"), "/hello.rs"));
+This presents a challenge for Soong as outputs for each module are placed in their own out/ directory2; there is no single OUT_DIR where dependencies output their generated source.
+For platform code, we prefer to package generated source into a crate that can be imported. There are a few reasons to favor this approach:
+Prevent generated source file names from colliding.
+Reduce boilerplate code checked-in throughout the tree and which needs to be maintained. Any boilerplate necessary to make the generated source compile into a crate can be centrally maintained.
+Avoid implicit3 interactions between generated code and the surrounding crate.  
+Reduce pressure on memory and disk by dynamically liking commonly used generated sources.
+As a result, all of Android’s Rust source generation module types produce code that can be compiled and used as a crate.
+We still support third-party crates without modification by copying all the generated source dependencies for a module into a single per-module directory similar to Cargo. Soong then sets the OUT_DIR environment variable to that directory when compiling the module so the generated source can be found. However we discourage use of this mechanism in platform code unless absolutely necessary for the reasons described above.
+Dynamic linkage by default
+By default, the Rust ecosystem assumes that crates will be statically linked into binaries. The usual benefits of dynamic libraries are upgrades (whether for security or functionality) and decreased memory usage. Rust’s lack of a stable binary interface and usage of cross-crate information flow prevents upgrading libraries without upgrading all dependent code. Even when the same crate is used by two different programs on the system, it is unlikely to be provided by the same shared object4 due to the precision with which Rust identifies its crates. This makes Rust binaries more portable but also results in larger disk and memory footprints.
+This is problematic for Android devices where resources like memory and disk usage must be carefully managed because statically linking all crates into Rust binaries would result in excessive code duplication (especially in the standard library). However, our situation is also different from the standard host environment: we build Android using global decisions about dependencies. This means that nearly every crate is shareable between all users of that crate. Thus, we opt to link crates dynamically by default for device targets. This reduces the overall memory footprint of Rust in Android by allowing crates to be reused across multiple binaries which depend on them.
+Since this is unusual in the Rust community, not all third-party crates support dynamic compilation. Sometimes we must carry small patches while we work with upstream maintainers to add support.
+Current Status of Build Support
+We support building all output types supported by rustc (rlibs, dylibs, proc_macros, cdylibs, staticlibs, and executables). Rust modules can automatically request the appropriate crate linkage for a given dependency (rlib vs dylib). C and C++ modules can depend on Rust cdylib or staticlib producing modules the same way as they would for a C or C++ library.
+In addition to being able to build Rust code, Android’s build system also provides support for protobuf and gRPC and AIDL generated crates. First-class bindgen support makes interfacing with existing C code simple and we have support modules using cxx for tighter integration with C++ code.
+The Rust community produces great tooling for developers, such as the language server rust-analyzer. We have integrated support for rust-analyzer into the build system so that any IDE which supports it can provide code completion and goto definitions for Android modules.
+Source-based code coverage builds are supported to provide platform developers high level signals on how well their code is covered by tests. Benchmarks are supported as their own module type, leveraging the criterion crate to provide performance metrics. In order to maintain a consistent style and level of code quality, a default set of clippy lints and rustc lints are enabled by default. Additionally, HWASAN/ASAN fuzzers are supported, with the HWASAN rustc support added to upstream. 
+In the near future, we plan to add documentation to source.android.com on how to define and use Rust modules in Soong. We expect Android’s support for Rust to continue evolving alongside the Rust ecosystem and hope to continue to participate in discussions around how Rust can be integrated into existing build systems.
+Thank you to Matthew Maurer, Jeff Vander Stoep, Joel Galenson, Manish Goregaokar, and Tyler Mandry for their contributions to this post.
+Notes
+    This can be mitigated to some extent with workspaces, but requires a very specific directory arrangement that AOSP does not conform to. ↩
+     This presents no problem for C/C++ and similar languages as the path to the generated source is provided directly to the compiler. ↩
+     Since include! works by textual inclusion, it may reference values from the enclosing namespace, modify the namespace, or use constructs like #![foo]. These implicit interactions can be difficult to maintain. Macros should be preferred if interaction with the rest of the crate is truly required.  ↩
+     While libstd would usually be shareable for the same compiler revision, most other libraries would end up with several copies for Cargo-built Rust binaries, since each build would attempt to use a minimum feature set and may select different dependency versions for the library in question. Since information propagates across crate boundaries, you cannot simply produce a “most general” instance of that library. ↩
+  
+                        
+                        Google
+                      
+Labels:
+android
+                                ,
+                              
+android security
+                                ,
+                              
+rust
+No comments
+                      :
+                    
+Post a Comment
+                      
+                    
+                          
+                        
+                          
+                        
+Labels
+                      
+                    
+#sharethemicincyber
+#supplychain #security #opensource
+AI Security
+android
+android security
+android tr
+app security
+big data
+biometrics
+blackhat
+C++
+chrome
+chrome enterprise
+chrome security
+connected devices
+CTF
+diversity
+encryption
+federated learning
+fuzzing
+Gboard
+google play
+google play protect
+hacking
+interoperability
+iot security
+kubernetes
+linux kernel
+memory safety
+Open Source
+pha family highlights
+pixel
+privacy
+private compute core
+Rowhammer
+rust
+Security
+security rewards program
+sigstore
+spyware
+supply chain
+targeted spyware
+tensor
+Titan M2
+VDP
+vulnerabilities
+workshop
+                      
+                    
+Archive
+                      
+                    
+                    
+                  
+                        
+                      
+                       
+                    
+2026
+Jan
+Feb
+Mar
+Apr
+                    
+                  
+                        
+                      
+                       
+                    
+2025
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2024
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2023
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2022
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                      
+2021
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2020
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2019
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2018
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2017
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2016
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2015
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2014
+Jan
+Feb
+Mar
+Apr
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2013
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2012
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Sep
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2011
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2010
+Mar
+Apr
+May
+Jul
+Aug
+Sep
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2009
+Mar
+Jun
+Jul
+Aug
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2008
+Feb
+May
+Jul
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2007
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Feed
+  
+		   
+Follow @google
+     Follow
+Give us feedback in our Product Forums.
+              Google
+            
+              Privacy
+            
+              Terms

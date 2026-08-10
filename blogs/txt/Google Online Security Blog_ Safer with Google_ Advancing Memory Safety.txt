@@ -1,0 +1,467 @@
+Google Online Security Blog: Safer with Google: Advancing Memory Safety
+-->
+            Security Blog
+          
+The latest news and insights from Google on security and safety on the Internet
+Safer with Google: Advancing Memory Safety
+October 15, 2024
+                          Posted by Alex Rebert, Security Foundations, and Chandler Carruth, Jen Engel, Andy Qin, Core Developers
+Error-prone interactions between software and memory1 are widely understood to create safety issues in software. It is estimated that about 70% of severe vulnerabilities2 in memory-unsafe codebases are due to memory safety bugs. Malicious actors exploit these vulnerabilities and continue to create real-world harm. In 2023, Google’s threat intelligence teams conducted an industry-wide study and observed a close to all-time high number of vulnerabilities exploited in the wild. Our internal analysis estimates that 75% of CVEs used in zero-day exploits are memory safety vulnerabilities.
+At Google, we have been mindful of these issues for over two decades, and are on a journey to continue advancing the state of memory safety in the software we consume and produce. Our Secure by Design commitment emphasizes integrating security considerations, including robust memory safety practices, throughout the entire software development lifecycle. This proactive approach fosters a safer and more trustworthy digital environment for everyone.
+This post builds upon our previously reported Perspective on Memory Safety, and introduces our strategic approach to memory safety. 
+Our journey so far
+Google's journey with memory safety is deeply intertwined with the evolution of the software industry itself. In our early days, we recognized the importance of balancing performance with safety. This led to the early adoption of memory-safe languages like Java and Python, and the creation of Go.  Today these languages comprise a large portion of our code, providing memory safety among other benefits. Meanwhile, the rest of our code is predominantly written in C++, previously the optimal choice for high-performance demands.
+We recognized the inherent risks associated with memory-unsafe languages and developed tools like sanitizers, which detect memory safety bugs dynamically, and fuzzers like AFL and libfuzzer, which proactively test the robustness and security of a software application by repeatedly feeding unexpected inputs. By open-sourcing these tools, we've empowered developers worldwide to reduce the likelihood of memory safety vulnerabilities in C and C++ codebases. Taking this commitment a step further, we provide continuous fuzzing to open-source projects through OSS-Fuzz, which helped get over 8800 vulnerabilities identified and subsequently fixed across 850 projects.
+Today, with the emergence of high-performance memory-safe languages like Rust, coupled with a deeper understanding of the limitations of purely detection-based approaches, we are focused primarily on preventing the introduction of security vulnerabilities at scale.
+Going forward: Google's two-pronged approach
+Google's long-term strategy for tackling memory safety challenges is multifaceted, recognizing the need to address both existing codebases and future development, while maintaining the pace of business.
+Our long-term objective is to progressively and consistently integrate memory-safe languages into Google's codebases while phasing out memory-unsafe code in new development. Given the amount of C++ code we use, we anticipate a residual amount of mature and stable memory-unsafe code will remain for the foreseeable future.
+ 
+Graphic of memory-safe language growth as memory-unsafe code is hardened and gradually decreased over time.
+Migration to Memory-Safe Languages (MSLs)
+The first pillar of our strategy is centered on further increasing the adoption of memory-safe languages. These languages drastically drive down the risk of memory-related errors through features like garbage collection and borrow checking, embodying the same Safe Coding3 principles that successfully eliminated other vulnerability classes like cross-site scripting (XSS) at scale. Google has already embraced MSLs like Java, Kotlin, Go, and Python for a large portion of our code. 
+Our next target is to ramp up memory-safe languages with the necessary capabilities to address the needs of even more of our low-level environments where C++ has remained dominant. For example, we are investing to expand Rust usage at Google beyond Android and other mobile use cases and into our server, application, and embedded ecosystems. This will unlock the use of MSLs in low-level code environments where C and C++ have typically been the language of choice. In addition, we are exploring more seamless interoperability with C++ through Carbon, as a means to accelerate even more of our transition to MSLs.  
+In Android, which runs on billions of devices and is one of our most critical platforms, we've already made strides in adopting MSLs, including Rust, in sections of our network, firmware and graphics stacks. We specifically focused on adopting memory safety in new code instead of rewriting mature and stable memory-unsafe C or C++ codebases. As we've previously discussed, this strategy is driven by vulnerability trends as memory safety vulnerabilities were typically introduced shortly before being discovered.
+As a result, the number of memory safety vulnerabilities reported in Android has decreased dramatically and quickly, dropping from more than 220 in 2019 to a projected 36 by the end of this year, demonstrating the effectiveness of this strategic shift. Given that memory-safety vulnerabilities are particularly severe, the reduction in memory safety vulnerabilities is leading to a corresponding drop in vulnerability severity, representing a reduction in security risk. 
+Risk Reduction for Memory-Unsafe Code 
+While transitioning to memory-safe languages is the long-term strategy, and one that requires investment now, we recognize the immediate responsibility we have to protect the safety of our billions of users during this process. This means we cannot ignore the reality of a large codebase written in memory-unsafe languages (MULs) like C and C++.
+Therefore the second pillar of our strategy focuses on risk reduction & containment of this portion of our codebase. This incorporates:
+C++ Hardening: We are retrofitting safety at scale in our memory-unsafe code, based on our experience eliminating web vulnerabilities. While we won't make C and C++ memory safe, we are eliminating sub-classes of vulnerabilities in the code we own, as well as reducing the risks of the remaining vulnerabilities through exploit mitigations.
+    We have allocated a portion of our computing resources specifically to bounds-checking the C++ standard library across our workloads. While bounds-checking overhead is small for individual applications, deploying it at Google's scale requires significant computing resources. This underscores our deep commitment to enhancing the safety and security of our products and services. Early results are promising, and we'll share more details in a future post.
+    In Chrome, we have also been rolling out MiraclePtr over the past few years, which effectively mitigated 57% of use-after-free vulnerabilities in privileged processes, and has been linked to a decrease of in-the-wild exploits.
+Security Boundaries: We are continuing4 to strengthen critical components of our software infrastructure through expanded use of isolation techniques like sandboxing and privilege reduction, limiting the potential impact of vulnerabilities. For example, earlier this year, we shipped the beta release of our V8 heap sandbox and included it in Chrome's Vulnerability Reward Program.
+Bug Detection: We are investing in bug detection tooling and innovative research such as Naptime and making ML-guided fuzzing as effortless and wide-spread as testing. While we are increasingly shifting towards memory safety by design, these tools and techniques remain a critical component of proactively identifying and reducing risks, especially against vulnerability classes currently lacking strong preventative controls.
+In addition, we are actively working with the semiconductor and research communities on emerging hardware-based approaches to improve memory safety. This includes our work to support and validate the efficacy of Memory Tagging Extension (MTE). Device implementations are starting to roll out, including within Google’s corporate environment. We are also conducting ongoing research into Capability Hardware Enhanced RISC Instructions (CHERI) architecture which can provide finer grained memory protections and safety controls, particularly appealing in security-critical environments like embedded systems.
+Looking ahead
+We believe it’s important to embrace the opportunity to achieve memory safety at scale, and that it will have a positive impact on the safety of the broader digital ecosystem. This path forward requires continuous investment and innovation to drive safety and velocity, and we remain committed to the broader community to walk this path together.
+We will provide future publications on memory safety that will go deeper into specific aspects of our strategy. 
+Notes
+     Anderson, J. Computer Security Technology Planning Study Vol II. ESD-TR-73-51, Vol. II, Electronic Systems Division, Air Force Systems Command, Hanscom Field, Bedford, MA 01730 (Oct. 1972).  
+    https://seclab.cs.ucdavis.edu/projects/history/papers/ande72.pdf  ↩
+     https://www.memorysafety.org/docs/memory-safety/#how-common-are-memory-safety-vulnerabilities  ↩
+     Kern, C. 2024. Developer Ecosystems for Software Safety. Commun. ACM 67, 6 (June 2024), 52–60. https://doi.org/10.1145/3651621 ↩
+     Barth, Adam, et al. “The security architecture of the chromium browser." Technical report. Stanford University, 2008.
+    https://seclab.stanford.edu/websec/chromium/chromium-security-architecture.pdf ↩
+  
+                        
+                        Google
+                      
+No comments
+                      :
+                    
+Post a Comment
+                      
+                    
+                          
+                        
+                          
+                        
+Labels
+                      
+                    
+#sharethemicincyber
+#supplychain #security #opensource
+AI Security
+android
+android security
+android tr
+app security
+big data
+biometrics
+blackhat
+C++
+chrome
+chrome enterprise
+chrome security
+connected devices
+CTF
+diversity
+encryption
+federated learning
+fuzzing
+Gboard
+google play
+google play protect
+hacking
+interoperability
+iot security
+kubernetes
+linux kernel
+memory safety
+Open Source
+pha family highlights
+pixel
+privacy
+private compute core
+Rowhammer
+rust
+Security
+security rewards program
+sigstore
+spyware
+supply chain
+targeted spyware
+tensor
+Titan M2
+VDP
+vulnerabilities
+workshop
+                      
+                    
+Archive
+                      
+                    
+                    
+                  
+                        
+                      
+                       
+                    
+2026
+Jan
+Feb
+Mar
+Apr
+                    
+                  
+                        
+                      
+                       
+                    
+2025
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                      
+2024
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2023
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2022
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2021
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2020
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2019
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2018
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2017
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2016
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2015
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2014
+Jan
+Feb
+Mar
+Apr
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2013
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2012
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Aug
+Sep
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2011
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2010
+Mar
+Apr
+May
+Jul
+Aug
+Sep
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2009
+Mar
+Jun
+Jul
+Aug
+Oct
+Nov
+                    
+                  
+                        
+                      
+                       
+                    
+2008
+Feb
+May
+Jul
+Aug
+Oct
+Nov
+Dec
+                    
+                  
+                        
+                      
+                       
+                    
+2007
+May
+Jun
+Jul
+Sep
+Oct
+Nov
+Feed
+  
+		   
+Follow @google
+     Follow
+Give us feedback in our Product Forums.
+              Google
+            
+              Privacy
+            
+              Terms
